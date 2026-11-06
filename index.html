@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="theme-color" content="#d9d9d9"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Espanhol App</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: coluna única de celular (largura máx. 480px), conteúdo rolável e barra de abas fixa embaixo, como nos protótipos. */
+:root {
+  --bg: #d9d9d9;
+  --surface: #ffffff;
+  --fg: #1c1c1e;
+  --muted: #5b5b60;
+  --accent: #e8a33d;
+  --accent-ink: #3a2500;
+  --ok: #17692f;
+  --bad: #a3231d;
+  --line: #c4c4c8;
+  --font: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b1c1f; --surface: #2b2d32; --fg: #f1f1f3; --muted: #a3a3aa;
+    --accent: #f0b254; --accent-ink: #2a1a00; --ok: #6fd18a; --bad: #ff8c84; --line: #3b3d43;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1b1c1f; --surface: #2b2d32; --fg: #f1f1f3; --muted: #a3a3aa;
+  --accent: #f0b254; --accent-ink: #2a1a00; --ok: #6fd18a; --bad: #ff8c84; --line: #3b3d43;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px;
+  padding-block: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+* { box-sizing: border-box; }
+.app { max-width: 480px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
+main { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 0; display: flex; flex-direction: column; gap: 14px; }
+h1 { font-size: 1.15rem; margin: 0; text-wrap: balance; }
+.top { display: flex; align-items: center; gap: 10px; }
+.top button.back { width: 40px; height: 40px; padding: 0; border-radius: 50%; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn {
+  width: 100%; min-height: 50px; border: 0; background: var(--surface); color: var(--fg);
+  border-radius: 4px; font-weight: 500; padding: 0 16px;
+}
+.btn.round { border-radius: 26px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.btn:disabled { opacity: .55; cursor: default; }
+.field {
+  width: 100%; min-height: 50px; border: 0; background: var(--surface); color: var(--fg);
+  border-radius: 4px; padding: 0 16px; text-align: center;
+}
+.field.round { border-radius: 26px; text-align: left; }
+.field::placeholder { color: var(--muted); }
+.swap { align-self: center; background: none; border: 0; font-size: 1.6rem; line-height: 1; padding: 6px 14px; }
+.grow { flex: 1; }
+.center { display: flex; flex-direction: column; gap: 12px; justify-content: center; flex: 1; }
+.msg { min-height: 1.4em; text-align: center; font-weight: 500; }
+.msg.ok { color: var(--ok); } .msg.bad { color: var(--bad); }
+.hint { color: var(--muted); font-size: .85rem; text-align: center; margin: 0; }
+.prompt { font-size: 2rem; font-weight: 700; text-align: center; margin: 0; overflow-wrap: anywhere; }
+.count { text-align: center; color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.letter { font-weight: 700; margin: 14px 0 4px; }
+.row { display: flex; align-items: center; gap: 8px; padding: 8px 4px; border-bottom: 1px solid var(--line); }
+.row span.w { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.row .hits { color: var(--ok); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.row .del { background: none; border: 0; color: var(--muted); padding: 6px 10px; border-radius: 6px; }
+.row .del.armed { background: var(--bad); color: #fff; }
+.empty { color: var(--muted); text-align: center; padding: 28px 8px; }
+.avatar { width: 64px; height: 64px; border-radius: 50%; background: #bfe3f5; display: grid; place-items: center; color: #1c3a4a; font-size: 2rem; }
+nav { display: flex; padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
+nav button { flex: 1; background: none; border: 0; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .75rem; color: var(--muted); }
+nav button svg { width: 26px; height: 26px; fill: currentColor; }
+nav button[aria-current="page"] { color: var(--fg); font-weight: 700; }
+nav button[aria-current="page"] .pill { background: var(--accent); color: var(--accent-ink); }
+nav .pill { padding: 3px 18px; border-radius: 14px; display: grid; place-items: center; }
+@media (prefers-reduced-motion: no-preference) { .btn, nav .pill { transition: background .15s; } }
+</style>
+
+<div class="app">
+  <main id="main"></main>
+  <nav aria-label="Navegação principal">
+    <button data-tab="home"><span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg></span>Início</button>
+    <button data-tab="words"><span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm2 4v2h12V8zm0 4v2h12v-2zm0 4v2h8v-2z"/></svg></span>Palavras</button>
+    <button data-tab="profile"><span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5z"/></svg></span>Perfil</button>
+  </nav>
+</div>
+
+<script>
+(function () {
+  // ---------- armazenamento (localStorage, com cópia em memória se o navegador bloquear) ----------
+  var mem = {};
+  function sget(k) { try { var v = localStorage.getItem(k); return v === null ? (mem[k] === undefined ? null : mem[k]) : v; } catch (e) { return mem[k] === undefined ? null : mem[k]; } }
+  function sset(k, v) { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} }
+  function sdel(k) { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} }
+  function jget(k, d) { try { var v = sget(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+
+  var session = sget('session') || '';            // e-mail logado, ou '' para convidado
+  function owner() { return session || 'guest'; }
+  function loadWords() {
+    var w = jget('words:' + owner(), null);
+    if (w === null) {
+      w = owner() === 'guest' ? [
+        { id: uid(), pt: 'amadurecer', es: 'madurar', hits: 0 },
+        { id: uid(), pt: 'buscar', es: 'buscar', hits: 0 }
+      ] : [];
+      saveWords(w);
+    }
+    return w;
+  }
+  function saveWords(w) { sset('words:' + owner(), JSON.stringify(w)); }
+  function uid() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
+
+  async function hash(s) {
+    try {
+      var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+      return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+    } catch (e) { return btoa(unescape(encodeURIComponent(s))); }
+  }
+
+  // ---------- utilitários ----------
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function norm(s) { return s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  var $main = document.getElementById('main');
+  var navBtns = Array.prototype.slice.call(document.querySelectorAll('nav button'));
+
+  // ---------- navegação ----------
+  var tab = 'home', screen = null; // screen: null | 'add' | 'quiz' | 'auth'
+  var quiz = null, authMode = 'login';
+  function go(t, s) { tab = t; screen = s || null; render(); }
+  navBtns.forEach(function (b) { b.addEventListener('click', function () { go(b.getAttribute('data-tab')); }); });
+
+  function render() {
+    navBtns.forEach(function (b) { if (b.getAttribute('data-tab') === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+    if (tab === 'home') { if (screen === 'add') return viewAdd(); if (screen === 'quiz') return viewQuiz(); return viewHome(); }
+    if (tab === 'words') return viewWords();
+    if (screen === 'auth') return viewAuth();
+    return viewProfile();
+  }
+  function topBar(title) {
+    return '<div class="top"><button class="btn back" id="back" aria-label="Voltar">←</button><h1>' + esc(title) + '</h1></div>';
+  }
+
+  // ---------- Início ----------
+  function viewHome() {
+    var n = loadWords().length;
+    $main.innerHTML =
+      '<h1>Treine seu espanhol</h1>' +
+      '<p class="hint" style="text-align:left">' + n + (n === 1 ? ' palavra salva' : ' palavras salvas') + '</p>' +
+      '<button class="btn primary" id="add">ADD WORD</button>' +
+      '<button class="btn" id="qpt">Guess from portuguese</button>' +
+      '<button class="btn" id="qes">Guess from Spanish</button>';
+    document.getElementById('add').onclick = function () { go('home', 'add'); };
+    document.getElementById('qpt').onclick = function () { startQuiz(true); };
+    document.getElementById('qes').onclick = function () { startQuiz(false); };
+  }
+
+  // ---------- Adicionar palavra ----------
+  function viewAdd() {
+    $main.innerHTML = topBar('Nova palavra') +
+      '<button class="btn primary" id="save">ADD WORD</button>' +
+      '<div class="grow"></div>' +
+      '<input class="field" id="pt" placeholder="Palavra em português" autocomplete="off" autocapitalize="none">' +
+      '<button class="swap" id="swap" aria-label="Trocar os textos">⇅</button>' +
+      '<input class="field" id="es" placeholder="Palavra em espanhol" autocomplete="off" autocapitalize="none">' +
+      '<p class="msg" id="msg" role="status"></p>' +
+      '<div class="grow"></div><div class="grow"></div>';
+    var pt = document.getElementById('pt'), es = document.getElementById('es'), msg = document.getElementById('msg');
+    document.getElementById('back').onclick = function () { go('home'); };
+    document.getElementById('swap').onclick = function () { var t = pt.value; pt.value = es.value; es.value = t; };
+    function save() {
+      var a = pt.value.trim(), b = es.value.trim();
+      if (!a || !b) { msg.className = 'msg bad'; msg.textContent = 'Preencha as duas palavras.'; return; }
+      var w = loadWords(); w.push({ id: uid(), pt: a, es: b, hits: 0 }); saveWords(w);
+      msg.className = 'msg ok'; msg.textContent = '"' + a + ' = ' + b + '" adicionada!';
+      pt.value = ''; es.value = ''; pt.focus();
+    }
+    document.getElementById('save').onclick = save;
+    es.addEventListener('keydown', function (e) { if (e.key === 'Enter') save(); });
+    pt.addEventListener('keydown', function (e) { if (e.key === 'Enter') es.focus(); });
+  }
+
+  // ---------- Treino ----------
+  function startQuiz(fromPt) {
+    quiz = { fromPt: fromPt, list: shuffle(loadWords()), i: 0, score: 0, checked: false, ok: false, answer: '' };
+    go('home', 'quiz');
+  }
+  function viewQuiz() {
+    var q = quiz, title = q.fromPt ? 'Português → Espanhol' : 'Espanhol → Português';
+    var head = topBar(title);
+    if (!q.list.length) {
+      $main.innerHTML = head + '<p class="empty">Adicione pelo menos uma palavra para começar a treinar.</p><button class="btn primary" id="toadd">ADD WORD</button>';
+      document.getElementById('back').onclick = function () { go('home'); };
+      document.getElementById('toadd').onclick = function () { go('home', 'add'); };
+      return;
+    }
+    if (q.i >= q.list.length) {
+      $main.innerHTML = head + '<div class="center"><p class="prompt">Você acertou ' + q.score + ' de ' + q.list.length + '!</p>' +
+        '<button class="btn primary" id="again">Treinar de novo</button><button class="btn" id="home">Voltar</button></div>';
+      document.getElementById('back').onclick = document.getElementById('home').onclick = function () { go('home'); };
+      document.getElementById('again').onclick = function () { startQuiz(q.fromPt); };
+      return;
+    }
+    var w = q.list[q.i], ask = q.fromPt ? w.pt : w.es, want = q.fromPt ? w.es : w.pt;
+    $main.innerHTML = head +
+      '<div class="center">' +
+      '<div class="count">' + (q.i + 1) + ' / ' + q.list.length + '</div>' +
+      '<p class="prompt">' + esc(ask) + '</p>' +
+      '<input class="field" id="ans" placeholder="' + (q.fromPt ? 'Digite em espanhol' : 'Digite em português') + '" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"' + (q.checked ? ' disabled' : '') + '>' +
+      '<p class="msg ' + (q.checked ? (q.ok ? 'ok' : 'bad') : '') + '" role="status">' + (q.checked ? (q.ok ? 'Correto! ✅' : 'Resposta: ' + esc(want) + ' ❌') : '') + '</p>' +
+      '<button class="btn primary" id="go">' + (q.checked ? 'Próxima' : 'Verificar') + '</button>' +
+      '</div>';
+    var ans = document.getElementById('ans');
+    ans.value = q.answer;
+    document.getElementById('back').onclick = function () { go('home'); };
+    function check() {
+      q.answer = ans.value; q.checked = true; q.ok = norm(ans.value) === norm(want);
+      if (q.ok) {
+        q.score++;
+        var all = loadWords(); all.forEach(function (x) { if (x.id === w.id) x.hits = (x.hits || 0) + 1; }); saveWords(all);
+      }
+      viewQuiz();
+      document.getElementById('go').focus();
+    }
+    function next() { q.i++; q.checked = false; q.ok = false; q.answer = ''; viewQuiz(); }
+    document.getElementById('go').onclick = q.checked ? next : check;
+    if (!q.checked) { ans.focus(); ans.addEventListener('keydown', function (e) { if (e.key === 'Enter') check(); }); }
+  }
+
+  // ---------- Lista de palavras ----------
+  var query = '', armed = null;
+  function viewWords() {
+    $main.innerHTML = '<input class="field round" id="q" type="search" placeholder="Pesquisar" autocomplete="off" aria-label="Pesquisar palavras"><div id="list"></div>';
+    var q = document.getElementById('q'); q.value = query;
+    q.addEventListener('input', function () { query = q.value; armed = null; drawList(); });
+    drawList();
+  }
+  function drawList() {
+    var box = document.getElementById('list'), term = norm(query);
+    var items = loadWords().filter(function (w) { return !term || norm(w.pt).indexOf(term) > -1 || norm(w.es).indexOf(term) > -1; })
+      .sort(function (a, b) { return a.pt.localeCompare(b.pt, 'pt'); });
+    if (!items.length) { box.innerHTML = '<p class="empty">' + (term ? 'Nenhuma palavra encontrada.' : 'Nenhuma palavra ainda. Adicione na aba Início.') + '</p>'; return; }
+    var html = '', last = '';
+    items.forEach(function (w) {
+      var l = (w.pt.charAt(0) || '#').toUpperCase();
+      if (norm(l).toUpperCase() !== last) { last = norm(l).toUpperCase(); html += '<div class="letter">' + esc(l) + '....</div>'; }
+      html += '<div class="row"><span class="w">' + esc(w.pt) + ' = ' + esc(w.es) + '</span>' +
+        (w.hits ? '<span class="hits" title="Acertos no treino">✓ ' + w.hits + '</span>' : '') +
+        '<button class="del' + (armed === w.id ? ' armed' : '') + '" data-id="' + w.id + '" aria-label="Apagar ' + esc(w.pt) + '">' + (armed === w.id ? 'Apagar?' : '×') + '</button></div>';
+    });
+    box.innerHTML = html;
+    Array.prototype.forEach.call(box.querySelectorAll('.del'), function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-id');
+        if (armed === id) { saveWords(loadWords().filter(function (x) { return x.id !== id; })); armed = null; }
+        else armed = id;
+        drawList();
+      };
+    });
+  }
+
+  // ---------- Perfil ----------
+  function viewProfile() {
+    var out = !!session;
+    $main.innerHTML = '<div class="avatar" aria-hidden="true">👤</div>' +
+      (out ? '<p>' + esc(session) + '</p>' : '<p class="hint" style="text-align:left">Você está usando o app sem conta. Suas palavras ficam salvas neste navegador.</p>') +
+      '<div class="grow"></div>' +
+      (out ? '<button class="btn round" id="logout">Sair</button>'
+           : '<button class="btn round" id="login">Login</button><button class="btn round" id="reg">Registrar-se</button>') +
+      '<div class="grow"></div><div class="grow"></div>';
+    if (out) document.getElementById('logout').onclick = function () { session = ''; sdel('session'); go('profile'); };
+    else {
+      document.getElementById('login').onclick = function () { authMode = 'login'; go('profile', 'auth'); };
+      document.getElementById('reg').onclick = function () { authMode = 'register'; go('profile', 'auth'); };
+    }
+  }
+  function viewAuth() {
+    var reg = authMode === 'register';
+    $main.innerHTML = topBar(reg ? 'Registrar-se' : 'Login') +
+      '<input class="field round" id="em" type="email" placeholder="E-mail" autocomplete="email" autocapitalize="none">' +
+      '<input class="field round" id="pw" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="' + (reg ? 'new-password' : 'current-password') + '">' +
+      '<p class="msg bad" id="err" role="alert"></p>' +
+      '<button class="btn primary round" id="ok">' + (reg ? 'Criar conta' : 'Entrar') + '</button>' +
+      '<p class="hint">' + (reg ? 'As palavras que você já adicionou passam para a nova conta.' : 'Ao entrar em outra conta, você verá as palavras dela.') +
+      ' Contas ficam salvas só neste navegador, não em um servidor.</p>';
+    document.getElementById('back').onclick = function () { go('profile'); };
+    var em = document.getElementById('em'), pw = document.getElementById('pw'), err = document.getElementById('err');
+    async function submit() {
+      var email = em.value.trim().toLowerCase(), pass = pw.value;
+      if (!/^\S+@\S+\.\S+$/.test(email)) { err.textContent = 'E-mail inválido.'; return; }
+      if (pass.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+      var users = jget('users', {}), h = await hash(pass);
+      if (reg) {
+        if (users[email]) { err.textContent = 'Esse e-mail já está em uso.'; return; }
+        users[email] = h; sset('users', JSON.stringify(users));
+        var guest = jget('words:guest', []); sset('words:' + email, JSON.stringify(guest)); // leva as palavras do convidado
+      } else if (users[email] !== h) { err.textContent = 'E-mail ou senha incorretos.'; return; }
+      session = email; sset('session', email); go('profile');
+    }
+    document.getElementById('ok').onclick = submit;
+    pw.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+  }
+
+  render();
+})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>
+</html>
