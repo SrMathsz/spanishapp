@@ -135,6 +135,19 @@ if (!backend) backend = makeLocal();
 
 // ---------- interface ----------
 var $main = document.getElementById('main');
+(function () {
+  var st = document.createElement('style');
+  st.textContent = '.game-lock{align-items:center;text-align:center}' +
+    '.meter{width:100%;max-width:280px;height:10px;border-radius:5px;background:var(--surface);overflow:hidden}' +
+    '.meter span{display:block;height:100%;background:var(--accent)}' +
+    '.gbar{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}' +
+    '.gcv{display:block;margin:0 auto;width:min(100%,360px,45vh);width:min(100%,360px,45dvh);aspect-ratio:3/4;background:var(--surface);border:3px solid var(--fg);border-radius:4px;touch-action:manipulation}';
+  document.head.appendChild(st);
+  var nav = document.querySelector('nav'), b = document.createElement('button');
+  b.setAttribute('data-tab', 'game');
+  b.innerHTML = '<span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M6 7h12a4 4 0 0 1 4 4v3a3 3 0 0 1-5.2 2L15 14H9l-1.8 2A3 3 0 0 1 2 14v-3a4 4 0 0 1 4-4zM7.2 9v1.2H6v1.6h1.2V13h1.6v-1.2H10v-1.6H8.8V9zM16 9.6a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm2.4 1.6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg></span>Jogo';
+  nav.insertBefore(b, nav.querySelector('[data-tab="profile"]'));
+})();
 var navBtns = Array.prototype.slice.call(document.querySelectorAll('nav button'));
 var tab = 'home', screen = null; // screen: null | 'add' | 'quiz' | 'auth'
 var quiz = null, authMode = 'login', query = '', armed = null;
@@ -147,12 +160,15 @@ backend.onChange(function () {
   if (tab === 'words' && document.getElementById('list')) drawList();
   else if (tab === 'home' && !screen) viewHome();
   else if (tab === 'profile' && !screen) viewProfile();
+  else if (tab === 'game' && !screen) viewGame();
 });
 
 function render() {
+  stopGame();
   navBtns.forEach(function (b) { if (b.getAttribute('data-tab') === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   if (tab === 'home') { if (screen === 'add') return viewAdd(); if (screen === 'quiz') return viewQuiz(); return viewHome(); }
   if (tab === 'words') return viewWords();
+  if (tab === 'game') return screen === 'play' ? viewGamePlay() : viewGame();
   if (screen === 'auth') return viewAuth();
   return viewProfile();
 }
@@ -277,6 +293,143 @@ function drawList() {
       else { armed = id; drawList(); }
     };
   });
+}
+
+// ---------- Jogo: chuva de palavras ----------
+var GAME_MIN = 20, GAME_W = 360, GAME_H = 480, GAME_BLOCK_H = 34;
+var game = null;
+
+function bestScore() { try { return parseInt(localStorage.getItem('best-game') || '0', 10) || 0; } catch (e) { return 0; } }
+function saveBest(n) { try { localStorage.setItem('best-game', String(n)); } catch (e) {} }
+function stopGame() { if (game && game.raf) { cancelAnimationFrame(game.raf); game.raf = 0; } }
+function themeColors() {
+  var cs = getComputedStyle(document.documentElement);
+  function v(n) { return cs.getPropertyValue(n).trim(); }
+  return { board: v('--surface'), block: v('--accent'), ink: v('--accent-ink'), limit: v('--bad'), fg: v('--fg') };
+}
+
+function viewGame() {
+  var n = backend.words().length;
+  if (n < GAME_MIN) {
+    $main.innerHTML = '<div class="center game-lock">' +
+      '<svg viewBox="0 0 24 24" width="52" height="52" fill="currentColor" aria-hidden="true"><path d="M17 9V7a5 5 0 0 0-10 0v2H5v12h14V9h-2zm-8 0V7a3 3 0 0 1 6 0v2H9z"/></svg>' +
+      '<p class="prompt" style="font-size:1.2rem">Você precisa registrar 20 palavras para liberar este espaço.</p>' +
+      '<div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="' + GAME_MIN + '" aria-valuenow="' + n + '"><span style="width:' + Math.round(n / GAME_MIN * 100) + '%"></span></div>' +
+      '<p class="count">' + n + ' de ' + GAME_MIN + ' palavras</p>' +
+      '<button class="btn primary" id="toadd">Adicionar palavra</button></div>';
+    document.getElementById('toadd').onclick = function () { go('home', 'add'); };
+    return;
+  }
+  $main.innerHTML = '<h1>Chuva de palavras</h1>' +
+    '<p class="hint" style="text-align:left">Os blocos caem e se empilham. Digite a palavra de um bloco para apagá-lo. Se a pilha passar da linha pontilhada, o jogo acaba.</p>' +
+    '<p class="count" style="text-align:left">Recorde: ' + bestScore() + '</p>' +
+    '<button class="btn primary" id="gm-pt">Ver em português, digitar em espanhol</button>' +
+    '<button class="btn" id="gm-es">Ver em espanhol, digitar em espanhol</button>';
+  document.getElementById('gm-pt').onclick = function () { startGame('pt'); };
+  document.getElementById('gm-es').onclick = function () { startGame('es'); };
+}
+
+function startGame(mode) {
+  stopGame();
+  var pool = backend.words().filter(function (w) { return w.pt && w.es; });
+  game = { mode: mode, pool: shuffle(pool), idx: 0, blocks: [], score: 0, over: false, spawn: 0.3, raf: 0, last: 0 };
+  go('game', 'play');
+}
+
+function viewGamePlay() {
+  var g = game;
+  $main.innerHTML =
+    '<div class="top"><button class="btn back" id="back" aria-label="Sair do jogo">←</button><h1>Chuva de palavras</h1></div>' +
+    '<div class="gbar"><span>Pontos <b id="gs">' + g.score + '</b></span><span>Recorde <b id="gb">' + bestScore() + '</b></span></div>' +
+    '<canvas id="gcv" class="gcv" aria-label="Área do jogo"></canvas>' +
+    '<div id="gfoot"><p class="hint" style="margin-bottom:8px">' + (g.mode === 'pt' ? 'Veja em português e digite em espanhol.' : 'Digite a palavra em espanhol.') + '</p>' +
+    '<input class="field" id="gin" placeholder="Digite aqui" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Digite a palavra"></div>';
+  document.getElementById('back').onclick = function () { go('game'); };
+  var cv = document.getElementById('gcv'), dpr = Math.min(window.devicePixelRatio || 1, 3);
+  cv.width = GAME_W * dpr; cv.height = GAME_H * dpr;
+  g.cv = cv; g.ctx = cv.getContext('2d'); g.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.tc = themeColors(); g.inp = document.getElementById('gin');
+  g.inp.addEventListener('input', function () { tryMatch(false); });
+  g.inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') tryMatch(true); });
+  cv.addEventListener('pointerdown', function () { g.inp.focus(); });
+  g.inp.focus();
+  g.last = 0;
+  g.raf = requestAnimationFrame(tickGame);
+}
+
+function tryMatch(force) {
+  var g = game; if (!g || g.over) return;
+  var v = norm(g.inp.value); if (!v) return;
+  var hit = null;
+  g.blocks.forEach(function (b) { if (norm(b.want) === v && (!hit || b.y > hit.y)) hit = b; }); // o mais baixo primeiro
+  if (hit) {
+    g.blocks.splice(g.blocks.indexOf(hit), 1);
+    g.score++;
+    document.getElementById('gs').textContent = g.score;
+    g.inp.value = '';
+  } else if (force) g.inp.value = '';
+}
+
+function spawnBlock(g) {
+  if (g.idx >= g.pool.length) { g.pool = shuffle(g.pool); g.idx = 0; }
+  var w0 = g.pool[g.idx++], txt = g.mode === 'pt' ? w0.pt : w0.es, size = 16, ctx = g.ctx, tw;
+  do { ctx.font = '500 ' + size + 'px "DM Sans", system-ui, sans-serif'; tw = ctx.measureText(txt).width; size--; } while (tw > GAME_W - 40 && size >= 9);
+  var w = Math.min(GAME_W - 8, Math.ceil(tw + 28));
+  g.blocks.push({ txt: txt, want: w0.es, font: ctx.font, x: 4 + Math.random() * (GAME_W - 8 - w), y: -GAME_BLOCK_H, w: w, h: GAME_BLOCK_H, rest: false });
+}
+
+function tickGame(ts) {
+  var g = game; if (!g || g.over) return;
+  var dt = g.last ? Math.min(0.05, (ts - g.last) / 1000) : 0; g.last = ts;
+  g.spawn -= dt;
+  if (g.spawn <= 0) { spawnBlock(g); g.spawn = Math.max(1.15, 2.8 - g.score * 0.045); }
+  var step = (50 + Math.min(90, g.score * 2.2)) * dt;
+  // do mais baixo para o mais alto: cada bloco cai até encostar no chão ou em outro bloco
+  var bs = g.blocks.slice().sort(function (a, b) { return (b.y + b.h) - (a.y + a.h); });
+  bs.forEach(function (b) {
+    var support = GAME_H;
+    bs.forEach(function (o) {
+      if (o !== b && o.y >= b.y + b.h - 1 && b.x < o.x + o.w && o.x < b.x + b.w && o.y < support) support = o.y;
+    });
+    if (b.y + b.h + step >= support) { b.y = support - b.h; b.rest = true; }
+    else { b.y += step; b.rest = false; }
+  });
+  var limit = GAME_H * 0.25; // linha a 75% da altura, contando de baixo
+  for (var i = 0; i < g.blocks.length; i++) { if (g.blocks[i].rest && g.blocks[i].y < limit - 0.5) { endGame(); return; } }
+  drawGame(g);
+  g.raf = requestAnimationFrame(tickGame);
+}
+
+function drawGame(g) {
+  var ctx = g.ctx, tc = g.tc, typed = norm(g.inp.value);
+  ctx.clearRect(0, 0, GAME_W, GAME_H);
+  ctx.fillStyle = tc.board; ctx.fillRect(0, 0, GAME_W, GAME_H);
+  ctx.save(); ctx.setLineDash([7, 6]); ctx.lineWidth = 2; ctx.strokeStyle = tc.limit;
+  ctx.beginPath(); ctx.moveTo(0, GAME_H * 0.25); ctx.lineTo(GAME_W, GAME_H * 0.25); ctx.stroke(); ctx.restore();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  g.blocks.forEach(function (b) {
+    var active = typed && norm(b.want).indexOf(typed) === 0;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(b.x, b.y, b.w, b.h, 5); else ctx.rect(b.x, b.y, b.w, b.h);
+    ctx.fillStyle = active ? tc.fg : tc.block; ctx.fill();
+    ctx.save(); ctx.globalAlpha = 0.45; ctx.lineWidth = 1.5; ctx.strokeStyle = tc.ink; ctx.stroke(); ctx.restore();
+    ctx.font = b.font; ctx.fillStyle = active ? tc.board : tc.ink;
+    ctx.fillText(b.txt, b.x + b.w / 2, b.y + b.h / 2 + 1);
+  });
+}
+
+function endGame() {
+  var g = game; g.over = true; if (g.raf) { cancelAnimationFrame(g.raf); g.raf = 0; }
+  drawGame(g);
+  var best = bestScore(), isBest = g.score > best;
+  if (isBest) { saveBest(g.score); best = g.score; }
+  var gb = document.getElementById('gb'); if (gb) gb.textContent = best;
+  document.getElementById('gfoot').innerHTML =
+    '<p class="prompt" style="font-size:1.5rem">Fim de jogo</p>' +
+    '<p class="msg ' + (isBest ? 'ok' : '') + '" role="status">' + g.score + (g.score === 1 ? ' palavra' : ' palavras') + (isBest ? ' · novo recorde!' : '') + '</p>' +
+    '<div style="display:flex;flex-direction:column;gap:10px"><button class="btn primary" id="again">Jogar de novo</button><button class="btn" id="gend">Voltar</button></div>';
+  document.getElementById('again').onclick = function () { startGame(g.mode); };
+  document.getElementById('gend').onclick = function () { go('game'); };
 }
 
 // Perfil
